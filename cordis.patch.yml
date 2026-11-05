@@ -1,0 +1,6 @@
+# One root row. The host half is empty; the row exists so the bundle's web
+# client (lib/client.js) is loaded. All behaviour lives in the browser and
+# per-device preferences are kept in that browser's localStorage.
+- insert:
+    - id: appearance
+      name: dsh-appearance
