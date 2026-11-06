@@ -1,6 +1,6 @@
 {
-  "name": "dsh-appearance",
-  "version": "0.1.1",
+  "name": "@forever-lwy/dsh-appearance",
+  "version": "0.1.2",
   "description": "Appearance tweaks for DeepSeek Harness: gather other plugins' composer buttons behind one button, turn the left sidebar into a mobile drawer opened from the top-left, and polish the mobile layout",
   "type": "module",
   "main": "lib/index.js",
@@ -17,6 +17,10 @@
     "LICENSE"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forever-lwy/dsh-appearance.git"
+  },
   "engines": {
     "node": ">=22.13",
     "dsh": "*"
@@ -25,7 +29,8 @@
     "build": "tsc -p tsconfig.json && node scripts/build-client.mjs",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "node --test --test-isolation=none test/*.test.mjs",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "release": "node scripts/release.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.5 <5.0.0"

@@ -3,4 +3,4 @@
 # per-device preferences are kept in that browser's localStorage.
 - insert:
     - id: appearance
-      name: dsh-appearance
+      name: '@forever-lwy/dsh-appearance'

@@ -90,7 +90,7 @@ await foreign
 
 // --- the plugin under test -------------------------------------------------
 loadBrowserModule(fileURLToPath(new URL('../lib/client.js', import.meta.url)))
-const appearance = loaded['dsh-appearance']
+const appearance = loaded['@forever-lwy/dsh-appearance']
 assert.deepEqual(appearance.inject, ['slots', 'layout', 'locale'])
 const fiber = ctx.plugin(appearance)
 await fiber

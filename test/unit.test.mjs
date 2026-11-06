@@ -40,7 +40,7 @@ test('the patch adds exactly one root row and changes no official row', () => {
   const after = composeEntries([...layers, loadOverlayPatches('appearance-test', resolve(project, 'cordis.patch.yml'))], message => warnings.push(message))
   assert.deepEqual(warnings, [])
   const added = after.filter(row => !before.some(other => other.id === row.id))
-  assert.deepEqual(added.map(row => [row.id, row.name]), [['appearance', 'dsh-appearance']])
+  assert.deepEqual(added.map(row => [row.id, row.name]), [['appearance', '@forever-lwy/dsh-appearance']])
   for (const row of before) assert.deepEqual(after.find(other => other.id === row.id), row)
 })
 
@@ -52,7 +52,7 @@ test('the host entry loads and does nothing', async () => {
 
 test('the browser bundle only requires modules the DSH loader provides', () => {
   const text = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
-  assert.ok(text.startsWith('window.__ModuleLoader__.load({id:"dsh-appearance"'))
+  assert.ok(text.startsWith('window.__ModuleLoader__.load({id:"@forever-lwy/dsh-appearance"'))
   const required = new Set([...text.matchAll(/require\("([^"]+)"\)/g)].map(match => match[1]))
   for (const name of required) assert.ok(['react', 'react/jsx-runtime', 'react-dom', '@deepseek-ai/cordis'].includes(name), name)
 })
