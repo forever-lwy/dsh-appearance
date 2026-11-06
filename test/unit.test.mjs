@@ -17,9 +17,9 @@ const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.
 const flush = () => new Promise(resolve => setTimeout(resolve, 0))
 
 // --- manifest & bundle patch -------------------------------------------------
-test('manifest declares the bundle patch, both entries and the exact rc.5 range', () => {
+test('manifest declares the bundle patch, both entries and no dsh version gate', () => {
   assert.equal(manifest.dsh.bundle.patch, './cordis.patch.yml')
-  assert.equal(manifest.engines.dsh, '0.2.1-rc.5')
+  assert.equal(manifest.engines.dsh, '*', 'never gate on the dsh version')
   assert.equal(manifest.main, 'lib/index.js')
   assert.equal(manifest.exports['./client'], './lib/client.js')
   assert.equal(manifest.dsh.client.platform, 'web')
@@ -32,7 +32,7 @@ test('the patch adds exactly one root row and changes no official row', () => {
   const layers = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'].flatMap(name => {
     const path = require.resolve(name + '/package.json')
     const pkg = JSON.parse(readFileSync(path, 'utf8'))
-    assert.equal(pkg.version, '0.2.1-rc.5')
+    assert.equal(pkg.version, '0.2.2-rc.1')
     return [].concat(pkg.dsh.bundle.patch).map(patch => loadOverlayPatches('appearance-test', resolve(dirname(path), patch)))
   })
   const before = composeEntries(layers)

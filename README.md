@@ -1,6 +1,6 @@
 # DSH Appearance（外观优化）
 
-适用于 **DeepSeek Harness 0.2.1-rc.5** 的纯前端外观插件。Host 端为空插件，仅用于加载浏览器模块；不需要运行时依赖，不读写服务器数据。
+适用于 **DeepSeek Harness**（当前在 `0.2.2-rc.1` 上构建测试，不按 dsh 版本拦截加载） 的纯前端外观插件。Host 端为空插件，仅用于加载浏览器模块；不需要运行时依赖，不读写服务器数据。
 
 ## 功能
 
@@ -37,7 +37,7 @@
 开发源码与运行副本分离。版本包：
 
 ```text
-/plugins/releases/dsh-appearance-0.1.0.tgz
+/plugins/releases/dsh-appearance-0.1.1.tgz
 ```
 
 在 DSH「插件 → 添加插件」输入上面的**容器路径**，由用户确认安装并启用。是否需要重启以界面提示为准。不要用 `link:`、目录依赖或模块路径把源码目录接入常用 profile。
