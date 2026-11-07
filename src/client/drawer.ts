@@ -3,6 +3,11 @@
  * (`narrowExpanded`, toggled through `ctx.layout.toggleSidebar()`); this
  * controller only reads it from the frame's `data-sidebar-collapsed`
  * attribute and asks the layout to close when the person navigates.
+ *
+ * Since 0.2.2 the shell has its own drawer below 768px (`data-sidebar-drawer`
+ * on the frame) with an opener, a mask, Escape handling and closing on panel
+ * selection. While it is active this controller only adds what the shell
+ * lacks: closing on Session switch / New Session and the left swipe.
  */
 import type { PrefsStore } from './prefs.js'
 import { mobileQuery, SIDEBAR_COL } from './styles.js'
@@ -13,6 +18,8 @@ export interface DrawerController {
   close(): void
   isOpen(): boolean
   isMobile(): boolean
+  /** The shell's own drawer is active. */
+  isNative(): boolean
   /** Report the Session the composer currently shows. */
   onSession(sessionId: string): void
   dispose(): void
@@ -42,9 +49,11 @@ export function createDrawerController({ doc, win, prefs, toggleSidebar, panelIn
   let settling = false
   let settleTimer: ReturnType<typeof setTimeout> | undefined
   let lastSession: string | undefined
+  const isNative = () => frameOf(doc)?.hasAttribute('data-sidebar-drawer') === true
   const isMobile = () => {
     const current = prefs.getSnapshot()
     if (!current.mobileDrawer) return false
+    if (isNative()) return true
     try { return win.matchMedia(mobileQuery(current)).matches } catch { return win.innerWidth <= current.breakpoint }
   }
   const isOpen = () => {
@@ -76,7 +85,9 @@ export function createDrawerController({ doc, win, prefs, toggleSidebar, panelIn
       const next = panelInfo.getSnapshot().activePanelId
       if (next === panel) return
       panel = next
-      close()
+      // The shell's selectPanel already closes its drawer; a second toggle
+      // before the frame re-renders would reopen it.
+      if (!isNative()) close()
     }))
   }
   const onClick = (event: MouseEvent) => {
@@ -87,7 +98,7 @@ export function createDrawerController({ doc, win, prefs, toggleSidebar, panelIn
     if (target.closest(`${SIDEBAR_COL} [class*="_newSession"], ${SIDEBAR_COL} [class*="_brand"]`)) win.setTimeout(close, 0)
   }
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== 'Escape' || event.defaultPrevented || !isMobile() || !isOpen()) return
+    if (event.key !== 'Escape' || event.defaultPrevented || isNative() || !isMobile() || !isOpen()) return
     if (doc.querySelector('[role="menu"], [role="dialog"]:not([data-dsh-appearance-tray])')) return
     close()
   }
@@ -96,7 +107,7 @@ export function createDrawerController({ doc, win, prefs, toggleSidebar, panelIn
     const target = event.target as Element | null
     touch = undefined
     if (event.touches.length !== 1 || !isMobile() || !isOpen() || !target?.closest) return
-    if (!target.closest(`${SIDEBAR_COL}, [data-dsh-appearance-backdrop]`)) return
+    if (!target.closest(`${SIDEBAR_COL}, [data-dsh-appearance-backdrop], [data-sidebar-mask]`)) return
     touch = { x: event.touches[0].clientX, y: event.touches[0].clientY }
   }
   const onTouchEnd = (event: TouchEvent) => {
@@ -119,7 +130,7 @@ export function createDrawerController({ doc, win, prefs, toggleSidebar, panelIn
     clearTimeout(settleTimer)
   })
   return {
-    toggle, close, isOpen, isMobile, onSession,
+    toggle, close, isOpen, isMobile, isNative, onSession,
     dispose: () => { for (const dispose of disposers.splice(0).reverse()) dispose() },
   }
 }

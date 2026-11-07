@@ -8,7 +8,7 @@ import { JSDOM } from 'jsdom'
 import { composeEntries, loadOverlayPatches } from '@deepseek-ai/dsh-app-boot'
 import { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
 import { foreignWinners, SHADOW_OFFSET, startMirror, TRAY_SLOT } from '../lib/client/mirror.js'
-import { buildCss, CENTER_COL, FRAME, RIGHTBAR_COL, SIDEBAR_COL } from '../lib/client/styles.js'
+import { buildCss, CENTER_COL, FRAME, NATIVE_DRAWER, RIGHTBAR_COL, SIDEBAR_COL } from '../lib/client/styles.js'
 import { DEFAULT_PREFS, normalizePrefs, createPrefsStore, STORAGE_KEY } from '../lib/client/prefs.js'
 
 const require = createRequire(import.meta.url)
@@ -189,11 +189,34 @@ test('structural selectors match the real rc.5 AppFrame and sidebar markup', () 
 
 test('the layout still renders the attributes the drawer reads', () => {
   const text = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-layout/package.json').replace(/package\.json$/, 'lib/client.js'), 'utf8')
-  for (const needle of ['"data-sidebar-collapsed": sidebarCollapsed', '"data-shell-overlay": true', '"data-rightbar-col": true', 'collapsedWidth = 56', 'SIDEBAR_AUTO_COLLAPSE = 1024'])
+  for (const needle of ['"data-sidebar-collapsed": sidebarCollapsed', '"data-sidebar-drawer": drawer || void 0', '"data-shell-overlay": true', '"data-rightbar-col": true', 'collapsedWidth = 56', 'SIDEBAR_AUTO_COLLAPSE = 1024'])
     assert.ok(text.includes(needle), needle)
   const conversation = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-conversation/package.json').replace(/package\.json$/, 'lib/client.js'), 'utf8')
   assert.ok(conversation.includes('renderSlot("conversation.header.leading", {})'))
   assert.ok(conversation.includes('renderSlot("conversation.input.left", {})') && conversation.includes('renderSlot("conversation.input.right", {})'))
+})
+
+test('the shell still renders its own drawer opener and mask', () => {
+  const sidebar = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-sidebar/package.json').replace(/package\.json$/, 'lib/client.js'), 'utf8')
+  assert.ok(sidebar.includes('"data-sidebar-opener": true') && sidebar.includes('ctx.slots.inject("shell.leading"'))
+  const layout = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-layout/package.json').replace(/package\.json$/, 'lib/client.js'), 'utf8')
+  assert.ok(layout.includes('"data-sidebar-mask": true') && layout.includes('const drawer = viewport < 768'))
+})
+
+test('the drawer stands down where the shell has its own drawer', () => {
+  const css = buildCss(DEFAULT_PREFS)
+  const dom = new JSDOM('<!doctype html><body><div id="f" data-sidebar-drawer><div class="pI_x6G_sidebarCol"></div><div data-shell-overlay></div></div></body>')
+  const doc = dom.window.document
+  assert.equal(doc.querySelector(NATIVE_DRAWER), doc.getElementById('f'))
+  // Our buttons and backdrop are hidden there.
+  assert.ok(css.includes(`${NATIVE_DRAWER} .dsha-menu-button,${NATIVE_DRAWER} .dsha-backdrop{display:none!important}`))
+  // Every rule that moves the sidebar column only targets frames without the native drawer.
+  const rules = css.split('}').filter(rule => rule.includes('_sidebarCol"]{') || rule.includes('_sidebarCol"] >'))
+  assert.ok(rules.length >= 2)
+  for (const rule of rules) for (const selector of rule.slice(0, rule.indexOf('{')).split(',').filter(s => s.includes('_sidebarCol')))
+    assert.ok(selector.includes(':not([data-sidebar-drawer])'), selector)
+  for (const rule of css.split('}').filter(rule => rule.includes('.dsha-backdrop{display:block')))
+    assert.ok(rule.includes(':not([data-sidebar-drawer])'), rule)
 })
 
 test('stylesheet follows preferences and breakpoint', () => {

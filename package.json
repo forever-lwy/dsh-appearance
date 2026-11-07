@@ -1,6 +1,6 @@
 {
   "name": "@forever-lwy/dsh-appearance",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Appearance tweaks for DeepSeek Harness: gather other plugins' composer buttons behind one button, turn the left sidebar into a mobile drawer opened from the top-left, and polish the mobile layout",
   "type": "module",
   "main": "lib/index.js",
