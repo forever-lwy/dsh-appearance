@@ -9,8 +9,17 @@ export const FRAME = 'div:has(> [data-shell-overlay])'
 export const SIDEBAR_COL = `${FRAME} > [class*="_sidebarCol"]`
 export const CENTER_COL = `${FRAME} > [class*="_centerCol"]`
 export const RIGHTBAR_COL = `${FRAME} > [data-rightbar-col]`
-const OPEN = `${FRAME}:not([data-sidebar-collapsed])`
-const PLAIN_WEB = 'html:not([data-platform="darwin"]):not([data-windows-titlebar])'
+/**
+ * 0.2.2+ ships its own drawer below 768px: the frame carries
+ * `data-sidebar-drawer`, and the shell renders an opener in `shell.leading`
+ * plus its own mask. While it is active this plugin's drawer stands down, so
+ * every drawer rule is scoped to frames without that attribute.
+ */
+export const NATIVE_DRAWER = `${FRAME}[data-sidebar-drawer]`
+const OWN = `${FRAME}:not([data-sidebar-drawer])`
+const OWN_SIDEBAR = `${OWN} > [class*="_sidebarCol"]`
+const OWN_OPEN = `${OWN}:not([data-sidebar-collapsed])`
+const PLAIN_WEB = 'html:not([data-platform="darwin"]):not([data-windows-titlebar]):not(:has([data-sidebar-drawer]))'
 
 export function mobileQuery(prefs: Pick<Prefs, 'breakpoint'>): string {
   return `(max-width: ${prefs.breakpoint}px)`
@@ -38,18 +47,19 @@ const drawerCss = (query: string) => `
 .dsha-mobile-only{display:none!important}
 @media ${query}{
   .dsha-mobile-only{display:inline-flex!important}
-  ${SIDEBAR_COL}{position:absolute;z-index:30;top:0;bottom:0;left:0;width:min(300px,86vw)!important;max-width:86vw;border-right:none;border-radius:0 16px 16px 0;overflow:hidden;transform:translateX(-104%);visibility:hidden;box-shadow:none;transition:transform .24s var(--ds-ease-in-out,ease),visibility 0s linear .24s,box-shadow .24s}
-  ${SIDEBAR_COL} > :not([data-slot]),${SIDEBAR_COL} > [data-slot] > *{width:100%!important;max-width:100%}
-  ${OPEN} > [class*="_sidebarCol"]{transform:none;visibility:visible;box-shadow:0 0 0 .5px var(--dsw-alias-border-l3,rgba(128,128,128,.25)),8px 0 40px rgba(0,0,0,.22);transition:transform .24s var(--ds-ease-in-out,ease),visibility 0s,box-shadow .24s}
-  ${CENTER_COL}{grid-column:1 / 3;grid-row:1}
-  ${RIGHTBAR_COL}{grid-column:3;grid-row:1}
+  ${OWN_SIDEBAR}{position:absolute;z-index:30;top:0;bottom:0;left:0;width:min(300px,86vw)!important;max-width:86vw;border-right:none;border-radius:0 16px 16px 0;overflow:hidden;transform:translateX(-104%);visibility:hidden;box-shadow:none;transition:transform .24s var(--ds-ease-in-out,ease),visibility 0s linear .24s,box-shadow .24s}
+  ${OWN_SIDEBAR} > :not([data-slot]),${OWN_SIDEBAR} > [data-slot] > *{width:100%!important;max-width:100%}
+  ${OWN_OPEN} > [class*="_sidebarCol"]{transform:none;visibility:visible;box-shadow:0 0 0 .5px var(--dsw-alias-border-l3,rgba(128,128,128,.25)),8px 0 40px rgba(0,0,0,.22);transition:transform .24s var(--ds-ease-in-out,ease),visibility 0s,box-shadow .24s}
+  ${OWN} > [class*="_centerCol"]{grid-column:1 / 3;grid-row:1}
+  ${OWN} > [data-rightbar-col]{grid-column:3;grid-row:1}
   .dsha-backdrop{display:none}
-  ${OPEN} .dsha-backdrop{display:block;position:absolute;inset:0;z-index:1;background:rgba(10,12,20,.38);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:dsha-fade .2s ease-out;touch-action:none}
-  ${OPEN} .dsha-panel-menu{visibility:hidden}
+  ${OWN_OPEN} .dsha-backdrop{display:block;position:absolute;inset:0;z-index:1;background:rgba(10,12,20,.38);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:dsha-fade .2s ease-out;touch-action:none}
+  ${OWN_OPEN} .dsha-panel-menu{visibility:hidden}
   ${PLAIN_WEB}{--dsh-frame-top-clearance:52px}
 }
 @keyframes dsha-fade{from{opacity:0}}
-@media (prefers-reduced-motion:reduce){${SIDEBAR_COL},.dsha-backdrop{transition:none!important;animation:none!important}}
+${NATIVE_DRAWER} .dsha-menu-button,${NATIVE_DRAWER} .dsha-backdrop{display:none!important}
+@media (prefers-reduced-motion:reduce){${OWN_SIDEBAR},.dsha-backdrop{transition:none!important;animation:none!important}}
 .dsha-menu-button{align-items:center;justify-content:center;flex:none;width:34px;height:34px;margin-left:-6px;padding:0;border:none;border-radius:10px;background:transparent;color:var(--dsw-alias-label-primary,inherit);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .dsha-menu-button:hover,.dsha-menu-button:active{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12))}
 .dsha-menu-button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4d6bfe);outline-offset:1px}
@@ -60,7 +70,8 @@ const polishCss = (query: string) => `
 @media ${query}{
   ${FRAME}{box-sizing:border-box;padding-bottom:env(safe-area-inset-bottom,0px)}
   ${CENTER_COL} [class*="_body"]{--dsh-composer-side-clearance:8px}
-  ${CENTER_COL} header[data-window-drag]{padding-left:12px;padding-right:12px}
+  ${CENTER_COL} header[data-window-drag]{padding-right:12px}
+  ${OWN} > [class*="_centerCol"] header[data-window-drag]{padding-left:12px}
   ${CENTER_COL} [contenteditable="true"]{font-size:16px}
   ${FRAME} button,${FRAME} [role="button"]{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   .dsha-tray-panel{left:8px!important;right:8px!important;width:auto!important;max-width:none;border-radius:14px}

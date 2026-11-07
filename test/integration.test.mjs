@@ -211,6 +211,40 @@ test('on mobile, navigation, backdrop taps and New Session close the drawer', as
   assert.equal(isOpen(), false, 'Escape closes it')
 })
 
+test('with the shell\'s own drawer, only Session switches and swipes are added', async () => {
+  const frame = document.querySelector('[data-shell-overlay]').parentElement
+  const open = async () => { if (frame.hasAttribute('data-sidebar-collapsed')) layout.toggleSidebar(); await new Promise(r => setTimeout(r, 400)) }
+  const isOpen = () => !frame.hasAttribute('data-sidebar-collapsed')
+  // Native drawer below 768px, even when this plugin's own breakpoint does not match.
+  w.matchMedia = query => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} })
+  frame.setAttribute('data-sidebar-drawer', '')
+  try {
+    await open()
+    let before = layout.toggles
+    await act(async () => document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    assert.equal(layout.toggles, before, 'Escape is left to the shell')
+    await act(async () => panelInfo.set({ activePanelId: 'plugins' }))
+    assert.equal(layout.toggles, before, 'panel selection is left to the shell')
+    await act(async () => panelInfo.set({ activePanelId: null }))
+    assert.equal(isOpen(), true)
+
+    await act(async () => { currentBinding.set(binding('s3')) })
+    await tick()
+    assert.equal(isOpen(), false, 'switching Session still closes it')
+
+    await open()
+    const mask = document.createElement('div'); mask.setAttribute('data-sidebar-mask', ''); frame.append(mask)
+    const touch = (type, x) => { const event = new w.Event(type, { bubbles: true }); const point = [{ clientX: x, clientY: 100 }]
+      Object.defineProperty(event, type === 'touchstart' ? 'touches' : 'changedTouches', { value: point }); return event }
+    await act(async () => { mask.dispatchEvent(touch('touchstart', 300)); mask.dispatchEvent(touch('touchend', 150)) })
+    assert.equal(isOpen(), false, 'swiping left on the shell mask closes it')
+    mask.remove()
+  } finally {
+    frame.removeAttribute('data-sidebar-drawer')
+    w.matchMedia = query => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} })
+  }
+})
+
 test('settings section renders and writes per-device preferences', async () => {
   const settings = document.querySelector('[data-dsh-appearance-settings]')
   assert.ok(settings)

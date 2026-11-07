@@ -3,6 +3,11 @@
  * (`narrowExpanded`, toggled through `ctx.layout.toggleSidebar()`); this
  * controller only reads it from the frame's `data-sidebar-collapsed`
  * attribute and asks the layout to close when the person navigates.
+ *
+ * Since 0.2.2 the shell has its own drawer below 768px (`data-sidebar-drawer`
+ * on the frame) with an opener, a mask, Escape handling and closing on panel
+ * selection. While it is active this controller only adds what the shell
+ * lacks: closing on Session switch / New Session and the left swipe.
  */
 import type { PrefsStore } from './prefs.js';
 export interface DrawerController {
@@ -11,6 +16,8 @@ export interface DrawerController {
     close(): void;
     isOpen(): boolean;
     isMobile(): boolean;
+    /** The shell's own drawer is active. */
+    isNative(): boolean;
     /** Report the Session the composer currently shows. */
     onSession(sessionId: string): void;
     dispose(): void;
