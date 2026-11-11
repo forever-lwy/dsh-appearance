@@ -4,6 +4,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import { AppearanceSettings, ComposerEntry, DrawerOverlay, HeaderMenuButton, type ComposerEntryFace, type DrawerFace } from './components.js'
 import { createDrawerController } from './drawer.js'
+import { startHasPatch } from './has-patch.js'
 import { en, NAMESPACE, zh, type Translate } from './locales.js'
 import { startMirror, TRAY_SLOT, type SlotsLike } from './mirror.js'
 import { createPrefsStore } from './prefs.js'
@@ -33,6 +34,8 @@ export function apply(ctx: Context): void {
     const stop = prefs.subscribe(render)
     return () => { stop(); style.remove() }
   }, 'appearance: styles')
+
+  ctx.effect(() => startHasPatch(document, window), 'appearance: official :has() rewrite')
 
   const drawer = createDrawerController({
     doc: document, win: window, prefs,
