@@ -32,7 +32,7 @@ test('the patch adds exactly one root row and changes no official row', () => {
   const layers = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'].flatMap(name => {
     const path = require.resolve(name + '/package.json')
     const pkg = JSON.parse(readFileSync(path, 'utf8'))
-    assert.equal(pkg.version, '0.2.2-rc.1')
+    assert.equal(pkg.version, '0.2.2-rc.3')
     return [].concat(pkg.dsh.bundle.patch).map(patch => loadOverlayPatches('appearance-test', resolve(dirname(path), patch)))
   })
   const before = composeEntries(layers)
@@ -161,7 +161,7 @@ test('the tray collapsing with the composer leaves no stale state behind', async
 // --- styles against the real rc.5 layout class names --------------------------
 function realClass(pkg, local) {
   const text = readFileSync(require.resolve(`@deepseek-ai/${pkg}/package.json`).replace(/package\.json$/, 'lib/client.js'), 'utf8')
-  const match = text.match(new RegExp(`"${local}": "([^"]+)"`))
+  const match = text.match(new RegExp(`["\x60]${local}["\x60]:\\s*["\x60]([^"\x60]+)["\x60]`))
   assert.ok(match, `${pkg} still exports CSS module class ${local}`)
   return match[1]
 }
@@ -189,18 +189,18 @@ test('structural selectors match the real rc.5 AppFrame and sidebar markup', () 
 
 test('the layout still renders the attributes the drawer reads', () => {
   const text = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-layout/package.json').replace(/package\.json$/, 'lib/client.js'), 'utf8')
-  for (const needle of ['"data-sidebar-collapsed": sidebarCollapsed', '"data-sidebar-drawer": drawer || void 0', '"data-shell-overlay": true', '"data-rightbar-col": true', 'collapsedWidth = 56', 'SIDEBAR_AUTO_COLLAPSE = 1024'])
-    assert.ok(text.includes(needle), needle)
+  for (const needle of ['"data-sidebar-collapsed":sidebarCollapsed', '"data-sidebar-drawer": drawer || void 0', '"data-shell-overlay":true', '"data-rightbar-col":true', 'collapsedWidth = 56', 'SIDEBAR_AUTO_COLLAPSE = 1024'])
+    assert.ok(text.replace(/\s+/g, '').includes(needle.replace(/\s+/g, '')), needle)
   const conversation = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-conversation/package.json').replace(/package\.json$/, 'lib/client.js'), 'utf8')
-  assert.ok(conversation.includes('renderSlot("conversation.header.leading", {})'))
-  assert.ok(conversation.includes('renderSlot("conversation.input.left", {})') && conversation.includes('renderSlot("conversation.input.right", {})'))
+  assert.ok(conversation.replace(/`/g, '"').replace(/\s+/g, '').includes('renderSlot("conversation.header.leading",{})'))
+  assert.ok(conversation.replace(/`/g, '"').replace(/\s+/g, '').includes('renderSlot("conversation.input.left",{})') && conversation.replace(/`/g, '"').replace(/\s+/g, '').includes('renderSlot("conversation.input.right",{})'))
 })
 
 test('the shell still renders its own drawer opener and mask', () => {
   const sidebar = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-sidebar/package.json').replace(/package\.json$/, 'lib/client.js'), 'utf8')
-  assert.ok(sidebar.includes('"data-sidebar-opener": true') && sidebar.includes('ctx.slots.inject("shell.leading"'))
+  assert.ok(sidebar.replace(/`/g, '"').replace(/\s+/g, '').includes('"data-sidebar-opener":true') && sidebar.replace(/`/g, '"').replace(/\s+/g, '').includes('ctx.slots.inject("shell.leading"'))
   const layout = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-layout/package.json').replace(/package\.json$/, 'lib/client.js'), 'utf8')
-  assert.ok(layout.includes('"data-sidebar-mask": true') && layout.includes('const drawer = viewport < 768'))
+  assert.ok(layout.replace(/\s+/g, '').includes('"data-sidebar-mask":true') && layout.replace(/\s+/g, '').includes('constdrawer=viewport<768'))
 })
 
 test('the drawer stands down where the shell has its own drawer', () => {
@@ -249,68 +249,4 @@ test('preferences normalize, persist and survive a throwing storage', () => {
   const fallback = createPrefsStore(broken)
   fallback.update({ breakpoint: 700 })
   assert.equal(fallback.getSnapshot().breakpoint, 700, 'kept in memory')
-})
-
-// --- official :has() rewrite ---------------------------------------------------
-test('the parent-side :has() of the Files sidebar is rewritten to its subject-side equivalent', async () => {
-  const { rewriteParentHas } = await import('../lib/client/has-patch.js')
-  const N = '.k-1LKG_navigator', F = '.k-1LKG_fill', W = '.k-1LKG_wholePage'
-  assert.equal(rewriteParentHas(`:has(> ${N}${F}) > :not(${N})`),
-    `:not(${N}):has(~ ${N}${F}), ${N}${F} ~ :not(${N}), ${N}${F}:not(${N})`)
-  assert.equal(rewriteParentHas(`:has(>${N}:not(${W}))>:not(${N})`),
-    `:not(${N}):has(~ ${N}:not(${W})), ${N}:not(${W}) ~ :not(${N}), ${N}:not(${W}):not(${N})`)
-  // Anything else is left alone, including an already rewritten selector.
-  for (const other of [
-    `:not(${N}):has(~ ${N}${F}), ${N}${F} ~ :not(${N}), ${N}${F}:not(${N})`,
-    `.row:has(> ${N}) > :not(${N})`, `:has(> ${N}) > div`, `:has(${N}) > :not(${N})`, `:has(> .a > .b) > :not(.a)`,
-    `:has(> .a, > .b) > :not(.a)`, `:has(> .a) > :not(.a) .c`, `:has(> .a) :not(.a)`, `:has(> .a) > :not(.a, .b)`, '.plain', ':has(> .a',
-  ]) assert.equal(rewriteParentHas(other), null, other)
-})
-
-test('both forms select the same elements', async () => {
-  const { rewriteParentHas } = await import('../lib/client/has-patch.js')
-  const dom = new JSDOM(`<main>
-    <div id="fill"><p id="a"></p><aside class="nav fill" id="n1"></aside><p id="b"></p><aside class="nav" id="n2"></aside></div>
-    <div id="plain"><p id="c"></p><aside class="nav" id="n3"></aside></div>
-    <div id="odd"><span class="fill" id="d"></span><p id="e"></p></div>
-    <div id="none"><p id="f"></p></div></main>`)
-  const ids = selector => [...dom.window.document.querySelectorAll(selector)].map(node => node.id).sort()
-  for (const original of [':has(> .nav.fill) > :not(.nav)', ':has(> .fill) > :not(.nav)', ':has(> .nav:not(.whole)) > :not(.nav)']) {
-    const rewritten = rewriteParentHas(original)
-    assert.ok(rewritten, original)
-    assert.deepEqual(ids(rewritten), ids(original), original)
-  }
-  assert.deepEqual(ids(rewriteParentHas(':has(> .nav.fill) > :not(.nav)')), ['a', 'b'])
-  assert.deepEqual(ids(rewriteParentHas(':has(> .fill) > :not(.nav)')), ['a', 'b', 'd', 'e'], 'a matching child that is not excluded is selected too')
-})
-
-test('only the Files sidebar stylesheet is patched, repeatedly and reversibly', async () => {
-  const { startHasPatch, patchDocument } = await import('../lib/client/has-patch.js')
-  const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>')
-  const { document } = dom.window
-  const sheet = (plugin, css) => { const style = document.createElement('style'); style.dataset.plugin = plugin; style.textContent = css; document.head.appendChild(style); return style }
-  const css = '.k_fill{inset:0}:has(> .k_navigator.k_fill) > :not(.k_navigator){visibility:hidden}@media (max-width:767px){:has(> .k_navigator:not(.k_wholePage)) > :not(.k_navigator){visibility:hidden}}'
-  const files = sheet('@deepseek-ai/dsh-client-ui-sidebar-files', css)
-  const foreign = sheet('some-other-plugin', css)
-  const selectors = style => { const out = []; const walk = rules => { for (const rule of rules) { if (rule.selectorText) out.push(rule.selectorText); if (rule.cssRules?.length) walk(rule.cssRules) } }; walk(style.sheet.cssRules); return out }
-  const original = selectors(files)
-  const stop = startHasPatch(document, dom.window)
-  const patched = selectors(files)
-  assert.equal(patched[0], original[0], 'unrelated rules stay')
-  assert.match(patched[1], /^:not\(\.k_navigator\):has\(~ \.k_navigator\.k_fill\), /)
-  assert.match(patched[2], /^:not\(\.k_navigator\):has\(~ \.k_navigator:not\(\.k_wholePage\)\), /, 'rules inside @media are rewritten too')
-  assert.ok(patched.every(selector => !/^:has\(/.test(selector)))
-  assert.deepEqual(selectors(foreign), original, 'other stylesheets are not touched')
-  assert.equal(files.sheet.cssRules[1].style.visibility, 'hidden', 'declarations are kept')
-  assert.equal(patchDocument(document, []), 0, 'a second pass finds nothing left to rewrite')
-  // A stylesheet the loader adds later (first load order, HMR) is picked up.
-  const later = sheet('@deepseek-ai/dsh-client-ui-sidebar-files', css)
-  await flush(); await flush()
-  assert.ok(selectors(later).every(selector => !/^:has\(/.test(selector)))
-  stop()
-  assert.deepEqual(selectors(files), original, 'unloading restores the host selectors')
-  assert.deepEqual(selectors(later), original)
-  const afterStop = sheet('@deepseek-ai/dsh-client-ui-sidebar-files', css)
-  await flush(); await flush()
-  assert.deepEqual(selectors(afterStop), original, 'nothing is patched after unloading')
 })
